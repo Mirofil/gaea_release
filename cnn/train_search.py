@@ -17,6 +17,87 @@ import torch.nn.functional as F
 
 from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
+from darts.genotypes import PRIMITIVES, count_ops
+
+import wandb
+
+def get_torch_home():
+    if "TORCH_HOME" in os.environ:
+        return os.environ["TORCH_HOME"]
+    elif "HOME" in os.environ:
+        return os.path.join(os.environ["HOME"], ".torch")
+    else:
+        raise ValueError(
+            "Did not find HOME in os.environ. "
+            "Please at least setup the path of HOME or TORCH_HOME "
+            "in the environment."
+        )
+
+def wandb_auth(fname: str = "nas_key.txt"):
+  gdrive_path = "/content/drive/MyDrive/colab/wandb/nas_key.txt"
+  if "WANDB_API_KEY" in os.environ:
+      wandb_key = os.environ["WANDB_API_KEY"]
+  elif os.path.exists(os.path.abspath("~" + os.sep + ".wandb" + os.sep + fname)):
+      # This branch does not seem to work as expected on Paperspace - it gives '/storage/~/.wandb/nas_key.txt'
+      print("Retrieving WANDB key from file")
+      f = open("~" + os.sep + ".wandb" + os.sep + fname, "r")
+      key = f.read().strip()
+      os.environ["WANDB_API_KEY"] = key
+  elif os.path.exists("/root/.wandb/"+fname):
+      print("Retrieving WANDB key from file")
+      f = open("/root/.wandb/"+fname, "r")
+      key = f.read().strip()
+      os.environ["WANDB_API_KEY"] = key
+
+  elif os.path.exists(
+      os.path.expandvars("%userprofile%") + os.sep + ".wandb" + os.sep + fname
+  ):
+      print("Retrieving WANDB key from file")
+      f = open(
+          os.path.expandvars("%userprofile%") + os.sep + ".wandb" + os.sep + fname,
+          "r",
+      )
+      key = f.read().strip()
+      os.environ["WANDB_API_KEY"] = key
+  elif os.path.exists(gdrive_path):
+      print("Retrieving WANDB key from file")
+      f = open(gdrive_path, "r")
+      key = f.read().strip()
+      os.environ["WANDB_API_KEY"] = key
+  wandb.login()
+
+  
+def load_nb301():
+    version = '0.9'
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    models_0_9_dir = os.path.join(current_dir, 'nb_models_0.9')
+    model_paths_0_9 = {
+        model_name : os.path.join(models_0_9_dir, '{}_v0.9'.format(model_name))
+        for model_name in ['xgb', 'gnn_gin', 'lgb_runtime']
+    }
+    models_1_0_dir = os.path.join(current_dir, 'nb_models_1.0')
+    model_paths_1_0 = {
+        model_name : os.path.join(models_1_0_dir, '{}_v1.0'.format(model_name))
+        for model_name in ['xgb', 'gnn_gin', 'lgb_runtime']
+    }
+    model_paths = model_paths_0_9 if version == '0.9' else model_paths_1_0
+
+    # If the models are not available at the paths, automatically download
+    # the models
+    # Note: If you would like to provide your own model locations, comment this out
+    if not all(os.path.exists(model) for model in model_paths.values()):
+        nb.download_models(version=version, delete_zip=True,
+                        download_dir=current_dir)
+
+    # Load the performance surrogate model
+    #NOTE: Loading the ensemble will set the seed to the same as used during training (logged in the model_configs.json)
+    #NOTE: Defaults to using the default model download path
+    print("==> Loading performance surrogate model...")
+    ensemble_dir_performance = model_paths['xgb']
+    print(ensemble_dir_performance)
+    performance_model = nb.load_ensemble(ensemble_dir_performance)
+    
+    return performance_model
 
 
 @hydra.main(config_path="../configs/cnn/config.yaml", strict=False)
@@ -25,6 +106,10 @@ def main(args):
     save_dir = os.getcwd()
 
     log = os.path.join(save_dir, "log.txt")
+
+    wandb_auth()
+    run = wandb.init(project="NAS", group=f"Search_Cell_gaea", reinit=True)
+    # wandb.config.update(args)
 
     # Setup SummaryWriter
     summary_dir = os.path.join(save_dir, "summary")
@@ -105,6 +190,8 @@ def main(args):
     logging.info("param size = %fMB", train_utils.count_parameters_in_MB(model))
 
     optimizer, scheduler = train_utils.setup_optimizer(model, args)
+    
+    api = load_nb301()
 
     # TODO: separate args by model, architect, etc
     # TODO: look into using hydra for config files
@@ -156,7 +243,11 @@ def main(args):
         # so calling here before infer.
         genotype = architect.genotype()
         logging.info("genotype = %s", genotype)
-
+        
+        genotype_perf = api.predict(config=genotype, representation='genotype', with_noise=False)
+        ops_count = count_ops(genotype)
+        logging.info(f"Genotype performance: {genotype_perf}, ops_count: {ops_count}")
+        
         if not args.search.single_level:
             valid_acc, valid_obj = train_utils.infer(
                 valid_queue,
@@ -169,7 +260,13 @@ def main(args):
                 best_valid = valid_acc
                 best_genotype = architect.genotype()
             logging.info("valid_acc %f", valid_acc)
+        else:
+            valid_acc, -1, valid_obj = -1
 
+        wandb_log = {"train_acc":train_acc, "train_loss":train_obj, "val_acc": valid_acc, "valid_loss":valid_obj, 
+                    "search.final.cifar10": genotype_perf, "epoch":epoch, "ops": ops_count}
+        wandb.log(wandb_log)
+        
         train_utils.save(
             save_dir,
             epoch + 1,

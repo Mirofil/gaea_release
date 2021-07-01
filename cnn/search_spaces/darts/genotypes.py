@@ -47,6 +47,11 @@ SMALL_NOZERO = [
     "sep_conv_3x3",
 ]
 
+def count_ops(genotype):
+  genotype = str(genotype)
+  counts = {op: genotype.count(op) for op in PRIMITIVES}
+  return counts
+
 NASNet = Genotype(
     normal=[
         ("sep_conv_5x5", 1),
