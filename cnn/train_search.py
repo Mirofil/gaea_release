@@ -17,7 +17,7 @@ import torch.nn as nn
 import torch.utils
 import torch.nn.functional as F
 import time
-
+from tqdm import tqdm
 from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
 from search_spaces.darts.genotypes import PRIMITIVES, count_ops
@@ -275,8 +275,13 @@ def main(args):
                 results[dataset] = api.get_more_info(
                     index, dataset, iepoch=199, hp='200', is_random=False
                 )
+            for dataset in datasets:
+                if (
+                    "test-accuracy" in results[dataset].keys()
+                ):  # Actually it seems all the datasets have this field?
+                    results[dataset] = results[dataset]["test-accuracy"]
                 
-            genotype = results
+            genotype_perf = results
             ops_count = count_ops_nb201(genotype)
         logging.info(f"Genotype performance: {genotype_perf}, ops_count: {ops_count}")
 
@@ -364,8 +369,7 @@ def train(
     top5 = train_utils.AvgrageMeter()
 
     for step, datapoint in enumerate(train_queue):
-        if "nas-bench-201" in args.search.search_space:
-            time.sleep(0.03)
+
         # The search dataqueue for nas-bench-201  returns both train and valid data
         # when looping through queue.  This is disabled with single level is indicated.
         if "nas-bench-201" in args.search.search_space and not (
