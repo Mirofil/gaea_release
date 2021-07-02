@@ -16,6 +16,7 @@ import pickle
 import torch.nn as nn
 import torch.utils
 import torch.nn.functional as F
+import time
 
 from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
@@ -233,7 +234,7 @@ def main(args):
         start_epochs = 0
 
     best_valid = 0
-    for epoch in range(start_epochs, args.run.epochs):
+    for epoch in tqdm(range(start_epochs, args.run.epochs), desc="Iterating over epochs"):
         lr = scheduler.get_lr()[0]
         logging.info("epoch %d lr %e", epoch, lr)
 
@@ -263,7 +264,7 @@ def main(args):
         genotype = architect.genotype()
         logging.info("genotype = %s", genotype)
         
-        if "nasbench" not in args.search_config:
+        if "nas-bench-201" not in args.search.search_space:
             genotype_perf = api.predict(config=genotype, representation='genotype', with_noise=False)
             ops_count = count_ops(genotype)
         else:
@@ -274,7 +275,8 @@ def main(args):
                 results[dataset] = api.get_more_info(
                     index, dataset, iepoch=199, hp='200', is_random=False
                 )
-            gentoype_perf = results
+                
+            genotype = results
             ops_count = count_ops_nb201(genotype)
         logging.info(f"Genotype performance: {genotype_perf}, ops_count: {ops_count}")
 
@@ -293,8 +295,13 @@ def main(args):
         else:
             valid_acc, valid_obj = -1, -1
 
-        wandb_log = {"train_acc":train_acc, "train_loss":train_obj, "val_acc": valid_acc, "valid_loss":valid_obj, 
-                    "search.final.cifar10": genotype_perf, "epoch":epoch, "ops": ops_count}
+        if "nas-bench-201" not in args.search.search_space:
+
+            wandb_log = {"train_acc":train_acc, "train_loss":train_obj, "val_acc": valid_acc, "valid_loss":valid_obj, 
+                        "search.final.cifar10": genotype_perf, "epoch":epoch, "ops": ops_count}
+        else:
+            wandb_log = {"train_acc":train_acc, "train_loss":train_obj, "val_acc": valid_acc, "valid_loss":valid_obj, 
+                "search.final": genotype_perf, "epoch":epoch, "ops": ops_count}
         wandb.log(wandb_log)
         
         train_utils.save(
@@ -357,6 +364,8 @@ def train(
     top5 = train_utils.AvgrageMeter()
 
     for step, datapoint in enumerate(train_queue):
+        if "nas-bench-201" in args.search.search_space:
+            time.sleep(0.03)
         # The search dataqueue for nas-bench-201  returns both train and valid data
         # when looping through queue.  This is disabled with single level is indicated.
         if "nas-bench-201" in args.search.search_space and not (
