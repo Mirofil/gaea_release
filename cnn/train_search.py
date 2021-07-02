@@ -1,3 +1,5 @@
+# python cnn/train_search.py mode=search_nasbench201 nas_algo=edarts search_config=method_edarts_space_nasbench201 run.seed=1 run.epochs=25 run.dataset=cifar10 search.single_level=true search.exclude_zero=true
+
 import os
 import sys
 import time
@@ -17,9 +19,13 @@ import torch.nn.functional as F
 
 from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
-from darts.genotypes import PRIMITIVES, count_ops
+from search_spaces.darts.genotypes import PRIMITIVES, count_ops
+import nasbench301 as nb
 
 import wandb
+from pathlib import Path
+lib_dir = (Path(__file__).parent / '..' / 'code' / 'AutoDL').resolve()
+if str(lib_dir) not in sys.path: sys.path.insert(0, str(lib_dir))
 
 def get_torch_home():
     if "TORCH_HOME" in os.environ:
@@ -69,7 +75,9 @@ def wandb_auth(fname: str = "nas_key.txt"):
   
 def load_nb301():
     version = '0.9'
-    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # current_dir = os.path.dirname(os.path.abspath(__file__))
+    current_dir = os.path.dirname(get_torch_home())
+
     models_0_9_dir = os.path.join(current_dir, 'nb_models_0.9')
     model_paths_0_9 = {
         model_name : os.path.join(models_0_9_dir, '{}_v0.9'.format(model_name))
@@ -99,6 +107,11 @@ def load_nb301():
     
     return performance_model
 
+def count_ops_nb201(arch):
+  ops = ['none', 'skip_connect', 'nor_conv_1x1', 'nor_conv_3x3', 'avg_pool_3x3']
+  arch_str = str(arch)
+  counts = {op: arch_str.count(op) for op in ops}
+  return counts
 
 @hydra.main(config_path="../configs/cnn/config.yaml", strict=False)
 def main(args):
@@ -109,7 +122,7 @@ def main(args):
 
     wandb_auth()
     run = wandb.init(project="NAS", group=f"Search_Cell_gaea", reinit=True)
-    # wandb.config.update(args)
+    wandb.config.update(args)
 
     # Setup SummaryWriter
     summary_dir = os.path.join(save_dir, "summary")
@@ -191,7 +204,13 @@ def main(args):
 
     optimizer, scheduler = train_utils.setup_optimizer(model, args)
     
-    api = load_nb301()
+    print(args)
+    if "nas-bench-201" not in args.search.search_space:
+        api = load_nb301()
+    else:
+        from nats_bench   import create
+        api = create(None, 'topology', fast_mode=True, verbose=False)
+
 
     # TODO: separate args by model, architect, etc
     # TODO: look into using hydra for config files
@@ -244,10 +263,21 @@ def main(args):
         genotype = architect.genotype()
         logging.info("genotype = %s", genotype)
         
-        genotype_perf = api.predict(config=genotype, representation='genotype', with_noise=False)
-        ops_count = count_ops(genotype)
+        if "nasbench" not in args.search_config:
+            genotype_perf = api.predict(config=genotype, representation='genotype', with_noise=False)
+            ops_count = count_ops(genotype)
+        else:
+            index = api.query_index_by_arch(genotype)
+            datasets = ["cifar10", "cifar10-valid", "cifar100", "ImageNet16-120"]
+            results = {dataset: {} for dataset in datasets}
+            for dataset in datasets:
+                results[dataset] = api.get_more_info(
+                    index, dataset, iepoch=199, hp='200', is_random=False
+                )
+            gentoype_perf = results
+            ops_count = count_ops_nb201(genotype)
         logging.info(f"Genotype performance: {genotype_perf}, ops_count: {ops_count}")
-        
+
         if not args.search.single_level:
             valid_acc, valid_obj = train_utils.infer(
                 valid_queue,
@@ -261,7 +291,7 @@ def main(args):
                 best_genotype = architect.genotype()
             logging.info("valid_acc %f", valid_acc)
         else:
-            valid_acc, -1, valid_obj = -1
+            valid_acc, valid_obj = -1, -1
 
         wandb_log = {"train_acc":train_acc, "train_loss":train_obj, "val_acc": valid_acc, "valid_loss":valid_obj, 
                     "search.final.cifar10": genotype_perf, "epoch":epoch, "ops": ops_count}

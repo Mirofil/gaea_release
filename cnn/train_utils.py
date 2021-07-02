@@ -19,6 +19,10 @@ from torch.autograd import Variable
 from collections import deque
 import torchvision.transforms as transforms
 
+from pathlib import Path
+lib_dir = (Path(__file__).parent / '..' / 'code' / 'AutoDL').resolve()
+if str(lib_dir) not in sys.path: sys.path.insert(0, str(lib_dir))
+
 # Import AutoDL Nasbench-201 functions for data loading
 from lib.datasets.get_dataset_with_transform import get_datasets, get_nas_search_loaders
 
