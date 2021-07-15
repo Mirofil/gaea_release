@@ -40,6 +40,6 @@ search:
 
 hydra:
     run:
-        dir: /data/eval-space-darts-${train.arch}-${run.dataset}-${run.seed}
+        dir: ./data/eval-space-darts-${train.arch}-${run.dataset}-${run.seed}
 
 
