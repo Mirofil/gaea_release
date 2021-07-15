@@ -440,7 +440,7 @@ if __name__ == "__main__":
     if 'TORCH_HOME' not in os.environ:
         print("Changing os environ")
         if os.path.exists('/notebooks/storage/.torch/'):
-            os.environ["TORCH_HOME"] = '/notebooks/storage/.torch/'
+            os.environ["TORCH_HOME"] = '/storage/.torch/'
 
         gdrive_torch_home = "/content/drive/MyDrive/colab/data/TORCH_HOME"
 
