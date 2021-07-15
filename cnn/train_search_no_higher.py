@@ -1,4 +1,4 @@
-# python cnn/train_search.py mode=search_nasbench201 nas_algo=edarts search_config=method_edarts_space_nasbench201 run.seed=1 run.epochs=25 run.dataset=cifar10 search.single_level=true search.exclude_zero=true
+# python cnn/train_search_no_higher.py mode=search_nasbench201 nas_algo=edarts search_config=method_edarts_space_nasbench201 run.seed=1 run.epochs=25 run.dataset=cifar10 search.single_level=true search.exclude_zero=true
 
 import os
 import sys
@@ -394,14 +394,20 @@ def train(
         model.train()
 
         # TODO: move architecture args into a separate dictionary within args
+        accum_only_cond = True if (step % inner_steps != 0 and step != len(train_queue) - 1) else False
+        zero_grads_cond = True if (step % inner_steps == 1 or step == 0) else False
+        if accum_only_cond:
+            print(f"Accum_only_cond={accum_only_cond} at step={step}")
+        if zero_grads_cond:
+            print(f"Zero_grads_cond = {zero_grads_cond} at step = {step}")
         if not random_arch:
             architect.step(
                 input,
                 target,
                 input_search,
                 target_search,
-                accum_only = True if (step % inner_steps != 0 and step != len(train_queue) - 1) else False,
-                zero_grads = True if (step % inner_steps == 1 or step == 0) else False,
+                accum_only = accum_only_cond,
+                zero_grads = zero_grads_cond,
                 **{
                     "eta": lr,
                     "network_optimizer": optimizer,
