@@ -119,7 +119,7 @@ def main(args):
     
 
     np.set_printoptions(precision=3)
-    save_dir = os.getcwd()
+    save_dir = "./experiments/"
 
     log = os.path.join(save_dir, "log.txt")
 
