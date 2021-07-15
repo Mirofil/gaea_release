@@ -120,6 +120,11 @@ def main(args):
 
     np.set_printoptions(precision=3)
     save_dir = "./experiments/"
+    
+    try:
+        os.mkdir('./experiments')
+    except Exception as e:
+        print(f"Experiments folder already exists: {e}")
 
     log = os.path.join(save_dir, "log.txt")
 
