@@ -117,14 +117,7 @@ def count_ops_nb201(arch):
 @hydra.main(config_path="../configs/cnn/config.yaml", strict=False)
 def main(args):
     
-    if 'TORCH_HOME' not in os.environ:
-        if os.path.exists('/notebooks/storage/.torch/'):
-            os.environ["TORCH_HOME"] = '/notebooks/storage/.torch/'
 
-        gdrive_torch_home = "/content/drive/MyDrive/colab/data/TORCH_HOME"
-
-        if os.path.exists(gdrive_torch_home):
-            os.environ["TORCH_HOME"] = "/content/drive/MyDrive/colab/data/TORCH_HOME"
     np.set_printoptions(precision=3)
     save_dir = os.getcwd()
 
@@ -444,4 +437,13 @@ def train(
 
 
 if __name__ == "__main__":
+    if 'TORCH_HOME' not in os.environ:
+        print("Changing os environ")
+        if os.path.exists('/notebooks/storage/.torch/'):
+            os.environ["TORCH_HOME"] = '/notebooks/storage/.torch/'
+
+        gdrive_torch_home = "/content/drive/MyDrive/colab/data/TORCH_HOME"
+
+        if os.path.exists(gdrive_torch_home):
+            os.environ["TORCH_HOME"] = "/content/drive/MyDrive/colab/data/TORCH_HOME"
     main()
