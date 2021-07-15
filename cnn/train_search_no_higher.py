@@ -396,7 +396,7 @@ def train(
         # TODO: move architecture args into a separate dictionary within args
         accum_only_cond = True if (step % inner_steps != 0 and step != len(train_queue) - 1) else False
         zero_grads_cond = True if (step % inner_steps == 1 or step == 0) else False
-        if accum_only_cond:
+        if not accum_only_cond:
             print(f"Accum_only_cond={accum_only_cond} at step={step}")
         if zero_grads_cond:
             print(f"Zero_grads_cond = {zero_grads_cond} at step = {step}")
