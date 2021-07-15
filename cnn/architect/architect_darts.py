@@ -70,6 +70,7 @@ class ArchitectDARTS(Architect):
         eta,
         network_optimizer,
         unrolled,
+        accum_only=False, zero_grads = True,
         **kwargs
     ):
         self.optimizer.zero_grad()

@@ -77,65 +77,68 @@ class ArchitectEDARTS(Architect):
     def get_edge_weights(self):
         return self.edges
 
-    def step(self, input_train, target_train, input_valid, target_valid, eta, **kwargs):
-        self.model.zero_grad()
-        self.zero_arch_var_grad()
+    def step(self, input_train, target_train, input_valid, target_valid, eta, accum_only=False, zero_grads = True, **kwargs):
+        if zero_grads:
+            self.model.zero_grad()
+            self.zero_arch_var_grad()
         self.set_model_alphas()
         self.set_model_edge_weights()
 
         # Perform exponentiated gradient manually
         self._backward_step(input_valid, target_valid)
 
-        if self.grad_clip is not None:
-            nn.utils.clip_grad_norm(self._arch_parameters, self.grad_clip)
 
-        update_set = [("alphas", self.alphas)]
-        if self.learn_edges:
-            update_set.append(("edges", self.edges))
+        if not accum_only:
+            if self.grad_clip is not None:
+                nn.utils.clip_grad_norm(self._arch_parameters, self.grad_clip)
 
-        for var_name, params in update_set:
-            for ct in self.cell_types:
-                p = params[ct]
-                norm_inf = torch.norm(p.grad.data, p=float("inf")).item()
-                norm2 = torch.norm(p.grad.data, p=2).item()
-                self.writer.add_scalar(
-                    "{}_{}_grad_2".format(var_name, ct), norm2, self.steps
-                )
-                self.writer.add_scalar(
-                    "{}_{}_grad_max".format(var_name, ct), norm_inf, self.steps
-                )
-                self.history.dict["grads"][var_name][ct].append(
-                    p.grad.data.cpu().numpy()
-                )
-                lr = self.lr if var_name == "alphas" else self.edge_lr
-                if self.adapt_lr:
-                    # lr = self.adaptive_lr.update_norm_get_lr(var_name, ct, norm_inf.item())
-                    lr = lr / norm_inf
-                    print("{} ({}) lr: {}".format(var_name, ct, lr))
-                if self.gd:
-                    p.data.sub_(lr * p.grad.data)
-                else:
-                    p.data.mul_(torch.exp(-lr * p.grad.data))
-                if var_name == "alphas":
-                    p.data = normalize(p.data, -1)
-                else:
-                    ## If edges, we normalize by node to 2
-                    # p.data = torch.clamp(p.data, min=1e-5)
-                    # p.data = self.trace_norm / torch.sum(p.data) * p.data
-                    node_weights = torch.zeros([self.n_edges]).cuda()
-                    offset = 0
-                    n_inputs = self.n_inputs
-                    for i in range(self.n_nodes):
-                        node_weights[offset : offset + n_inputs] = sum(
-                            p.data[offset : offset + n_inputs]
-                        )
-                        offset += n_inputs
-                        n_inputs += 1
-                    p.data = p.data / node_weights
+            update_set = [("alphas", self.alphas)]
+            if self.learn_edges:
+                update_set.append(("edges", self.edges))
 
-                p.grad.detach_()
-                p.grad.zero_()
-                # lr *= 3
+            for var_name, params in update_set:
+                for ct in self.cell_types:
+                    p = params[ct]
+                    norm_inf = torch.norm(p.grad.data, p=float("inf")).item()
+                    norm2 = torch.norm(p.grad.data, p=2).item()
+                    self.writer.add_scalar(
+                        "{}_{}_grad_2".format(var_name, ct), norm2, self.steps
+                    )
+                    self.writer.add_scalar(
+                        "{}_{}_grad_max".format(var_name, ct), norm_inf, self.steps
+                    )
+                    self.history.dict["grads"][var_name][ct].append(
+                        p.grad.data.cpu().numpy()
+                    )
+                    lr = self.lr if var_name == "alphas" else self.edge_lr
+                    if self.adapt_lr:
+                        # lr = self.adaptive_lr.update_norm_get_lr(var_name, ct, norm_inf.item())
+                        lr = lr / norm_inf
+                        print("{} ({}) lr: {}".format(var_name, ct, lr))
+                    if self.gd:
+                        p.data.sub_(lr * p.grad.data)
+                    else:
+                        p.data.mul_(torch.exp(-lr * p.grad.data))
+                    if var_name == "alphas":
+                        p.data = normalize(p.data, -1)
+                    else:
+                        ## If edges, we normalize by node to 2
+                        # p.data = torch.clamp(p.data, min=1e-5)
+                        # p.data = self.trace_norm / torch.sum(p.data) * p.data
+                        node_weights = torch.zeros([self.n_edges]).cuda()
+                        offset = 0
+                        n_inputs = self.n_inputs
+                        for i in range(self.n_nodes):
+                            node_weights[offset : offset + n_inputs] = sum(
+                                p.data[offset : offset + n_inputs]
+                            )
+                            offset += n_inputs
+                            n_inputs += 1
+                        p.data = p.data / node_weights
+
+                    p.grad.detach_()
+                    p.grad.zero_()
+                    # lr *= 3
         self.steps += 1
 
     def _backward_step(self, input_valid, target_valid):

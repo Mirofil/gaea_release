@@ -98,7 +98,7 @@ class ArchitectEGDAS(Architect):
             weights[ct] = (alphas[ct].data * edges[ct].data.unsqueeze(1)).cpu().numpy()
         return weights
 
-    def step(self, input_train, target_train, input_valid, target_valid, eta, **kwargs):
+    def step(self, input_train, target_train, input_valid, target_valid, eta, accum_only=False, zero_grads = True, **kwargs):
         if self.epochs >= self.warmup_epochs:
             self.set_tau()
             self.model.zero_grad()
