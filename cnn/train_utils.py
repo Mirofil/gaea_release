@@ -26,6 +26,7 @@ if str(lib_dir) not in sys.path: sys.path.insert(0, str(lib_dir))
 # Import AutoDL Nasbench-201 functions for data loading
 from lib.datasets.get_dataset_with_transform import get_datasets, get_nas_search_loaders
 
+import shutil
 
 class AvgrageMeter(object):
     def __init__(self):
@@ -449,6 +450,16 @@ def load(folder, rng_seed, model, optimizer, architect=None, s3_bucket=None):
 
     return epochs, history
 
+def create_exp_dir(path, scripts_to_save=None):
+    if not os.path.exists(path):
+        os.makedirs(path)
+    print('Experiment dir : {}'.format(path))
+
+    if scripts_to_save is not None:
+        os.mkdir(os.path.join(path, 'scripts'))
+        for script in scripts_to_save:
+            dst_file = os.path.join(path, 'scripts', os.path.basename(script))
+            shutil.copyfile(script, dst_file)
 
 def infer(valid_queue, model, criterion, report_freq=50, discrete=False):
     objs = AvgrageMeter()
