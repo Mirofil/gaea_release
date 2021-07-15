@@ -370,8 +370,9 @@ def train(
     top1 = train_utils.AvgrageMeter()
     top5 = train_utils.AvgrageMeter()
 
-    for step, datapoint in enumerate(train_queue):
-
+    for step, datapoint in tqdm(enumerate(train_queue), desc = "Iterating over batches"):
+        if step < 3 or step % inner_steps + 1 == 0:
+            print(f"Arch params: {model._arch_parameters}")
         # The search dataqueue for nas-bench-201  returns both train and valid data
         # when looping through queue.  This is disabled with single level is indicated.
         if "nas-bench-201" in args.search.search_space and not (
