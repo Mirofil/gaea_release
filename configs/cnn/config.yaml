@@ -20,7 +20,7 @@ defaults:
 run:
     s3_bucket: null
     seed: ???
-    data: /data
+    data: /storage/gaea
     dataset: cifar10 
     epochs: ???
     scheduler_epochs: 50
