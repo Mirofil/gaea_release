@@ -122,7 +122,7 @@ def main(args):
     # else:
     #     save_dir = os.getcwd()
     #     save_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), save_dir)
-    save_dir = '/storage/gaea_release/'
+    save_dir = f'/storage/gaea_release/search_step5_k2_new-{args.run.seed}-{args.run.dataset}'
     logging.info(f"Save dir: {save_dir}")
     log = os.path.join(save_dir, "log.txt")
 
