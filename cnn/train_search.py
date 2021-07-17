@@ -125,7 +125,7 @@ def main(args):
     #     save_dir = os.getcwd()
     #     save_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), save_dir)
     save_dir = '/storage/gaea_release/'
-    print(f"Save dir: {save_dir}")
+    logging.info(f"Save dir: {save_dir}")
 
     log = os.path.join(save_dir, "log.txt")
 
