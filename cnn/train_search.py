@@ -119,11 +119,12 @@ def main(args):
     
     np.set_printoptions(precision=3)
     
-    if os.path.exists('/storage/gaea_release'):
-        save_dir = '/storage/gaea_release/'
-    else:
-        save_dir = os.getcwd()
-        save_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), save_dir)
+    # if os.path.exists('/storage/gaea_release'):
+    #     save_dir = '/storage/gaea_release/'
+    # else:
+    #     save_dir = os.getcwd()
+    #     save_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), save_dir)
+    save_dir = '/storage/gaea_release/'
     print(f"Save dir: {save_dir}")
 
     log = os.path.join(save_dir, "log.txt")
