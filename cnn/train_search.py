@@ -1,5 +1,5 @@
 # python cnn/train_search.py mode=search_nasbench201 nas_algo=edarts search_config=method_edarts_space_nasbench201 run.seed=1 run.epochs=25 run.dataset=cifar10 search.single_level=true search.exclude_zero=true
-
+# python cnn/train_search.py mode=search_pcdarts nas_algo=eedarts search_config=method_eedarts_space_pcdarts run.seed=1 run.epochs=50 run.dataset=cifar10 search.single_level=false search.exclude_zero=false
 import os
 import sys
 import time
