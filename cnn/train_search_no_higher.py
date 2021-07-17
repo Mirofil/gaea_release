@@ -122,9 +122,9 @@ def main(args):
     # else:
     #     save_dir = os.getcwd()
     #     save_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), save_dir)
-    save_dir = f'/storage/gaea_release/{args.run.seed}-{args.run.dataset}'
+    save_dir = f'/storage/gaea_release/exps/{args.run.seed}-{args.run.dataset}-{args.search.method}'
     try:
-        os.path.makedirs(save_dir)
+        os.makedirs(save_dir)
     except Exception as e:
         print(f"Failed to make dir due to {e}")
     logging.info(f"Save dir: {save_dir}")
