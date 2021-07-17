@@ -20,7 +20,7 @@ defaults:
 run:
     s3_bucket: null
     seed: ???
-    data: /storage/gaea
+    data: /storage/gaea_release/
     dataset: cifar10 
     epochs: ???
     scheduler_epochs: 50
@@ -40,6 +40,6 @@ search:
 
 hydra:
     run:
-        dir: ./storage/gaea/eval-space-darts-${train.arch}-${run.dataset}-${run.seed}
+        dir: ./storage/gaea_release/eval-space-darts-${train.arch}-${run.dataset}-${run.seed}
 
 
