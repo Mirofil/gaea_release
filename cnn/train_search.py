@@ -1,5 +1,6 @@
 # python cnn/train_search.py mode=search_nasbench201 nas_algo=edarts search_config=method_edarts_space_nasbench201 run.seed=1 run.epochs=25 run.dataset=cifar10 search.single_level=true search.exclude_zero=true
 # python cnn/train_search.py mode=search_pcdarts nas_algo=eedarts search_config=method_eedarts_space_pcdarts run.seed=1 run.epochs=50 run.dataset=cifar10 search.single_level=false search.exclude_zero=false
+
 import os
 import sys
 import time
@@ -27,6 +28,7 @@ import wandb
 from pathlib import Path
 lib_dir = (Path(__file__).parent / '..' / 'code' / 'AutoDL').resolve()
 if str(lib_dir) not in sys.path: sys.path.insert(0, str(lib_dir))
+
 
 def get_torch_home():
     if "TORCH_HOME" in os.environ:
@@ -279,6 +281,8 @@ def main(args):
         if "nas-bench-201" not in args.search.search_space:
             genotype_perf = api.predict(config=genotype, representation='genotype', with_noise=False)
             ops_count = count_ops(genotype)
+            width = {k: train_utils.genotype_width(getattr(genotype, k)) for k in ["normal", "reduce"]}
+            depth = {k: train_utils.genotype_depth(getattr(genotype, k)) for k in ["normal", "reduce"]}
         else:
             index = api.query_index_by_arch(genotype)
             datasets = ["cifar10", "cifar10-valid", "cifar100", "ImageNet16-120"]
@@ -295,7 +299,9 @@ def main(args):
                 
             genotype_perf = results
             ops_count = count_ops_nb201(genotype)
-        logging.info(f"Genotype performance: {genotype_perf}, ops_count: {ops_count}")
+            width = None
+            depth = None
+        logging.info(f"Genotype performance: {genotype_perf}, ops_count: {ops_count}, width: {width}, depth: {depth}")
 
         if not args.search.single_level:
             valid_acc, valid_obj = train_utils.infer(
@@ -315,10 +321,10 @@ def main(args):
         if "nas-bench-201" not in args.search.search_space:
 
             wandb_log = {"train_acc":train_acc, "train_loss":train_obj, "val_acc": valid_acc, "valid_loss":valid_obj, 
-                        "search.final.cifar10": genotype_perf, "epoch":epoch, "ops": ops_count}
+                        "search.final.cifar10": genotype_perf, "epoch":epoch, "ops": ops_count, "width":width, "depth": depth}
         else:
             wandb_log = {"train_acc":train_acc, "train_loss":train_obj, "val_acc": valid_acc, "valid_loss":valid_obj, 
-                "search.final": genotype_perf, "epoch":epoch, "ops": ops_count}
+                "search.final": genotype_perf, "epoch":epoch, "ops": ops_count, "width":width, "depth": depth}
         wandb.log(wandb_log)
         
         train_utils.save(
