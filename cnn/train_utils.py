@@ -299,12 +299,19 @@ def create_data_queues(args, eval_split=False):
         indices = list(range(num_train))
 
         if args.search.single_level:
-            train_end = num_train
-            val_start = 0
+            if args.search.single_level_portion:
+                train_end = round(num_train * args.search.single_level)
+                val_start = 0
+                val_end = train_end
+            else:
+                train_end = num_train
+                val_start = 0
+                val_end = None
         else:
             split = int(np.floor(args.search.train_portion * num_train))
             train_end = split
             val_start = split
+            val_end = None
 
         valid_data = deepcopy(train_data)
 
@@ -320,7 +327,7 @@ def create_data_queues(args, eval_split=False):
             valid_data,
             batch_size=args.train.batch_size,
             sampler=torch.utils.data.sampler.SubsetRandomSampler(
-                np.random.permutation(indices[val_start:])
+                np.random.permutation(indices[val_start:val_end])
             ),
             pin_memory=True,
             num_workers=0,
