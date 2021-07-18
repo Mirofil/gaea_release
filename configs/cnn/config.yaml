@@ -36,6 +36,7 @@ search:
     # Whether to exclude zero op from search space
     exclude_zero: ???
     merge_train_val: false
+    single_level_portion: False
     track_running_stats: true 
 
 
