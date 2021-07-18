@@ -332,7 +332,9 @@ def create_data_queues(args, eval_split=False):
             num_workers=0,
         )
         
-        print(f"Train end: {train_end}, val_start= {val_start}, val_end={val_end}, len of data queue = {len(train_queue)}, len of val queue = {len(valid_queue)}")
+        print(f"""Train end: {train_end}, val_start= {val_start}, val_end={val_end}, 
+              len of data queue = {len(train_queue)}, len of val queue = {len(valid_queue)}, single_level={args.search.single_level},
+              single_level_portion = {args.search.single_level_portion}""")
 
     return num_train, 10, train_queue, valid_queue
 
