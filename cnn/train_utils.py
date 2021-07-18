@@ -300,9 +300,10 @@ def create_data_queues(args, eval_split=False):
 
         if args.search.single_level:
             if args.search.single_level_portion:
-                train_end = round(num_train * args.search.single_level)
+                train_end = round(num_train * args.search.single_level_portion)
                 val_start = 0
                 val_end = train_end
+                print(f"Reduced single level queue length")
             else:
                 train_end = num_train
                 val_start = 0
