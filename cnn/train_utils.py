@@ -314,7 +314,6 @@ def create_data_queues(args, eval_split=False):
             val_end = None
 
         valid_data = deepcopy(train_data)
-
         train_queue = torch.utils.data.DataLoader(
             train_data,
             batch_size=args.train.batch_size,
@@ -332,6 +331,9 @@ def create_data_queues(args, eval_split=False):
             pin_memory=True,
             num_workers=0,
         )
+        
+        print(f"Train end: {train_end}, val_start= {val_start}, val_end={val_end}, len of data queue = {len(train_queue)}, len of val queue = {len(valid_queue)}")
+
     return num_train, 10, train_queue, valid_queue
 
 
